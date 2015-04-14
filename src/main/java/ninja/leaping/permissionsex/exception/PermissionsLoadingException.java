@@ -16,12 +16,14 @@
  */
 package ninja.leaping.permissionsex.exception;
 
+import ninja.leaping.permissionsex.util.Translatable;
+
 public class PermissionsLoadingException extends PermissionsException {
-    public PermissionsLoadingException(String message) {
+    public PermissionsLoadingException(Translatable message) {
         super(message);
     }
 
-    public PermissionsLoadingException(String message, Throwable cause) {
+    public PermissionsLoadingException(Translatable message, Throwable cause) {
         super(message, cause);
     }
 }

@@ -16,20 +16,37 @@
  */
 package ninja.leaping.permissionsex.exception;
 
+import ninja.leaping.permissionsex.util.Translatable;
+
+import java.util.Locale;
+
 public class PermissionsException extends Exception {
-    public PermissionsException() {
-        super();
+    private final Translatable message;
+
+    public PermissionsException(Translatable message) {
+        this.message = message;
     }
 
-    public PermissionsException(String message) {
-        super(message);
-    }
-
-    public PermissionsException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public PermissionsException(Throwable cause) {
+    public PermissionsException(Translatable message, Throwable cause) {
         super(cause);
+        this.message = message;
+    }
+
+    @Override
+    public String getMessage() {
+        return getLocalizedMessage();
+    }
+
+    @Override
+    public String getLocalizedMessage() {
+        return getLocalizedMessage(Locale.getDefault());
+    }
+
+    public Translatable getTranslatableMessage() {
+        return message;
+    }
+
+    public String getLocalizedMessage(Locale locale) {
+        return message.translateFormatted(locale);
     }
 }

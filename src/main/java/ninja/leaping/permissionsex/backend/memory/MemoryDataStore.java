@@ -14,24 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.backends.memory;
+package ninja.leaping.permissionsex.backend.memory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import ninja.leaping.configurate.objectmapping.Setting;
-import ninja.leaping.permissionsex.PermissionsEx;
-import ninja.leaping.permissionsex.backends.AbstractDataStore;
-import ninja.leaping.permissionsex.backends.DataStore;
+import ninja.leaping.permissionsex.backend.AbstractDataStore;
+import ninja.leaping.permissionsex.backend.DataStore;
 import ninja.leaping.permissionsex.data.ImmutableOptionSubjectData;
-import ninja.leaping.permissionsex.exception.PermissionsLoadingException;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * A data store backed entirely in memory
@@ -41,7 +41,7 @@ public class MemoryDataStore extends AbstractDataStore {
 
     @Setting(comment = "Whether or not this data store will store subjects being set") private boolean track = true;
 
-    private final ConcurrentHashMap<Map.Entry<String, String>, ImmutableOptionSubjectData> data = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Map.Entry<String, String>, ImmutableOptionSubjectData> data = new ConcurrentHashMap<>();
 
     public MemoryDataStore() {
         super(FACTORY);
@@ -101,6 +101,17 @@ public class MemoryDataStore extends AbstractDataStore {
                 return input.getValue();
             }
         });
+    }
+
+    @Override
+    public Iterable<String> getRegisteredTypes() {
+        return ImmutableSet.copyOf(Iterables.transform(data.keySet(), new Function<Map.Entry<String, String>, String>() {
+            @Nullable
+            @Override
+            public String apply(@Nullable Map.Entry<String, String> input) {
+                return input.getKey();
+            }
+        }));
     }
 
     @Override

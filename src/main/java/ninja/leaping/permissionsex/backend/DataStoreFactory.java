@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.util.command;
+package ninja.leaping.permissionsex.backend;
 
-/**
- * Created by zml on 25.03.15.
- */
-public class CommandArgs {
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.permissionsex.exception.PermissionsLoadingException;
+
+public interface DataStoreFactory {
+    public DataStore createDataStore(String identifier, ConfigurationNode config) throws PermissionsLoadingException;
 }

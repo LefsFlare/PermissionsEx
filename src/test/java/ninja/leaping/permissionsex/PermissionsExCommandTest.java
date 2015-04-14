@@ -14,11 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.backends;
+package ninja.leaping.permissionsex;
 
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.permissionsex.exception.PermissionsLoadingException;
 
-public interface DataStoreFactory {
-    public DataStore createDataStore(String identifier, ConfigurationNode config) throws PermissionsLoadingException;
+/**
+ * Created by zml on 04.04.15.
+ */
+public class PermissionsExCommandTest extends PermissionsExTest {
+    @Override
+    protected void populate(ConfigurationNode node) {
+
+    }
 }

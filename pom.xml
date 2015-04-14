@@ -10,7 +10,7 @@
   <url>https://github.com/PEXPlugins/PermissionsEx</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <version.configurate>1.0.1</version.configurate>
+    <version.configurate>1.1</version.configurate>
   </properties>
   <issueManagement>
     <system>GitHub</system>
@@ -245,6 +245,25 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>ninja.leaping</groupId>
+        <artifactId>gettext-maven-plugin</artifactId>
+        <version>1.2.5-SNAPSHOT</version>
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>gettext</goal>
+              <goal>merge</goal>
+              <goal>dist</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <keywords>-k_ -k_n:1,2 -kdtr -ktranslated</keywords>
+          <targetBundle>ninja.leaping.permissionsex.locale.Messages</targetBundle>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -264,6 +283,17 @@
     <dependency>
       <groupId>ninja.leaping.configurate</groupId>
       <artifactId>configurate-yaml</artifactId>
+      <version>${version.configurate}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>ninja.leaping.configurate</groupId>
+          <artifactId>configurate-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>ninja.leaping.configurate</groupId>
+      <artifactId>configurate-json</artifactId>
       <version>${version.configurate}</version>
       <exclusions>
         <exclusion>
@@ -294,7 +324,21 @@
       <artifactId>json-simple</artifactId>
       <version>1.1</version>
     </dependency>
+    <dependency>
+      <groupId>org.gnu.gettext</groupId>
+      <artifactId>libintl</artifactId>
+      <version>0.18.2</version>
+    </dependency>
   </dependencies>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>sonatype-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
   <repositories>
     <repository>
       <id>pex-repo</id>
@@ -315,12 +359,14 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.9.1</version>
+      </plugin>
+      <plugin>
+        <groupId>ninja.leaping</groupId>
+        <artifactId>gettext-maven-plugin</artifactId>
+        <version>1.2.5-SNAPSHOT</version>
         <configuration>
-          <links>
-            <link>
-              <package></package>
-            </link>
-          </links>
+          <keywords>-k_ -k_n:1,2 -kdtr -ktranslated</keywords>
+          <targetBundle>ninja.leaping.permissionsex.locale.Messages</targetBundle>
         </configuration>
       </plugin>
     </plugins>

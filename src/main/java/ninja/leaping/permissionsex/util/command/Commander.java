@@ -16,16 +16,27 @@
  */
 package ninja.leaping.permissionsex.util.command;
 
-import ninja.leaping.permissionsex.localization.LocalizationTarget;
+import com.google.common.base.Optional;
+import ninja.leaping.permissionsex.util.Translatable;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Created by zml on 20.03.15.
  */
-public interface Commander<TextType> extends LocalizationTarget {
+public interface Commander<TextType> {
     public String getName();
+    public Locale getLocale();
+    public Optional<Map.Entry<String, String>> getSubjectIdentifier();
+    public boolean hasPermission(String permission);
     public Set<Map.Entry<String, String>> getActiveContexts();
-    public MessageFormatter<TextType> getResponseElementFactory();
+    public MessageFormatter<TextType> fmt();
+    public void msg(Translatable text);
+    public void debug(Translatable text);
+    public void error(Translatable text);
+    public void msg(TextType text);
+    public void debug(TextType text);
+    public void error(TextType text);
 }

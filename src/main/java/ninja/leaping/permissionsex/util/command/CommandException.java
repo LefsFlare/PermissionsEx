@@ -17,9 +17,18 @@
 package ninja.leaping.permissionsex.util.command;
 
 import ninja.leaping.permissionsex.exception.PermissionsException;
+import ninja.leaping.permissionsex.util.Translatable;
 
 /**
- * Created by zml on 25.03.15.
+ * Exception relating to the execution of a command
  */
-public class ArgumentParseException extends PermissionsException {
+public class CommandException extends PermissionsException {
+
+    public CommandException(Translatable message) {
+        super(message);
+    }
+
+    public CommandException(Translatable message, Throwable cause) {
+        super(message, cause);
+    }
 }

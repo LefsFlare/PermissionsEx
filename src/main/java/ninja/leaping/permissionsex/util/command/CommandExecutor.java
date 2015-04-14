@@ -14,12 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.localization;
+package ninja.leaping.permissionsex.util.command;
 
 /**
- * Represents a localizable target for command output. This target localizes and formats messages in an implementation-specific way
+ * Interface containing the method directing how a certain command will be executed
  */
-public interface LocalizationTarget {
-	public void sendMessage(String localizationKey, Object... args);
-	public void sendError(String localizationKey, Object... args);
+public interface CommandExecutor {
+    /**
+     * Callback for the execution of a command
+     *
+     * @param src The commander who is executing this command
+     * @param args The parsed command arguments for this command
+     * @param <TextType> The type of text this Commander wants
+     * @throws CommandException If a user-facing error occurs while executing this command
+     */
+    public <TextType> void execute(Commander<TextType> src, CommandContext args) throws CommandException;
 }

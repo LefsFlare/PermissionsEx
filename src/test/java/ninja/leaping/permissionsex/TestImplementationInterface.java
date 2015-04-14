@@ -16,11 +16,14 @@
  */
 package ninja.leaping.permissionsex;
 
+import com.google.common.collect.ImmutableSet;
+import ninja.leaping.permissionsex.util.command.CommandSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.io.File;
+import java.util.Set;
 
 /**
  * Created by zml on 15.03.15.
@@ -51,5 +54,19 @@ public class TestImplementationInterface implements ImplementationInterface {
     @Override
     public void executeAsyncronously(Runnable run) {
         run.run();
+    }
+
+    @Override
+    public void registerCommand(CommandSpec command) {
+    }
+
+    @Override
+    public Set<CommandSpec> getImplementationCommands() {
+        return ImmutableSet.of();
+    }
+
+    @Override
+    public String getVersion() {
+        return "test";
     }
 }

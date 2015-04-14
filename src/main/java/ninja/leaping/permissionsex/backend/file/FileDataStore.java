@@ -14,11 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.backends.file;
+package ninja.leaping.permissionsex.backend.file;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -27,15 +30,17 @@ import com.google.common.util.concurrent.ListenableFutureTask;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
+import ninja.leaping.configurate.json.FieldValueSeparatorStyle;
+import ninja.leaping.configurate.json.JSONConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.transformation.ConfigurationTransformation;
 import ninja.leaping.configurate.transformation.TransformAction;
 import ninja.leaping.configurate.yaml.YAMLConfigurationLoader;
-import ninja.leaping.permissionsex.backends.AbstractDataStore;
-import ninja.leaping.permissionsex.backends.ConversionUtils;
-import ninja.leaping.permissionsex.backends.DataStore;
+import ninja.leaping.permissionsex.backend.AbstractDataStore;
+import ninja.leaping.permissionsex.backend.ConversionUtils;
+import ninja.leaping.permissionsex.backend.DataStore;
 import ninja.leaping.permissionsex.data.ImmutableOptionSubjectData;
 import ninja.leaping.permissionsex.exception.PermissionsLoadingException;
 
@@ -44,6 +49,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -51,13 +57,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static ninja.leaping.configurate.transformation.ConfigurationTransformation.WILDCARD_OBJECT;
+import static ninja.leaping.permissionsex.util.Translations._;
 
 
 public class FileDataStore extends AbstractDataStore {
     public static final Factory FACTORY = new Factory("file", FileDataStore.class);
 
-    @Setting("file")
+    @Setting
     private String file;
+    @Setting
+    private boolean compat = false;
+
     private ConfigurationLoader permissionsFileLoader;
     private ConfigurationNode permissionsConfig;
     private final AtomicInteger saveSuppressed = new AtomicInteger();
@@ -69,29 +79,50 @@ public class FileDataStore extends AbstractDataStore {
     private static ConfigurationTransformation.Builder tBuilder() {
         return ConfigurationTransformation.builder();
     }
+
+    private ConfigurationLoader<? extends ConfigurationNode> createLoader(File file) {
+        JSONConfigurationLoader.Builder build = JSONConfigurationLoader.builder()
+                .setFile(file)
+                .setIndent(4)
+                .setFieldValueSeparatorStyle(FieldValueSeparatorStyle.SPACE_AFTER);
+
+        /*if (!compat) {
+            build.getFactory().disable(JsonGenerator.Feature.QUOTE_FIELD_NAMES);
+            build.getFactory().enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES);
+        }*/
+        return build.build();
+    }
+
+    private File migrateLegacy(File permissionsFile, String extension, ConfigurationLoader<?> loader, String formatName) throws PermissionsLoadingException {
+        File legacyPermissionsFile = permissionsFile;
+        file = file.replace(extension, ".json");
+        permissionsFile = new File(getManager().getBaseDirectory(), file);
+        permissionsFileLoader = createLoader(permissionsFile);
+        try {
+            permissionsConfig = loader.load();
+            permissionsFileLoader.save(permissionsConfig);
+            legacyPermissionsFile.renameTo(new File(legacyPermissionsFile.getCanonicalPath() + ".legacy-backup"));
+        } catch (IOException e) {
+            throw new PermissionsLoadingException(_("While loading legacy %s permissions from %s", formatName, permissionsFile), e);
+        }
+        return permissionsFile;
+    }
+
+    @Override
     protected void initializeInternal() throws PermissionsLoadingException {
         File permissionsFile = new File(getManager().getBaseDirectory(), file);
         if (file.endsWith(".yml")) {
-            File legacyPermissionsFile = permissionsFile;
-            ConfigurationLoader<ConfigurationNode> yamlLoader = YAMLConfigurationLoader.builder().setFile(permissionsFile).build();
-            file = file.replace(".yml", ".conf");
-            permissionsFile = new File(getManager().getBaseDirectory(), file);
-            permissionsFileLoader = HoconConfigurationLoader.builder().setFile(permissionsFile).build();
-            try {
-                permissionsConfig = yamlLoader.load();
-                permissionsFileLoader.save(permissionsConfig);
-                legacyPermissionsFile.renameTo(new File(legacyPermissionsFile.getCanonicalPath() + ".bukkit-backup"));
-            } catch (IOException e) {
-                throw new PermissionsLoadingException("While loading legacy YML permissions from " + permissionsFile, e);
-            }
+            permissionsFile = migrateLegacy(permissionsFile, ".yml", YAMLConfigurationLoader.builder().setFile(permissionsFile).build(), "YML");
+        } else if (file.endsWith(".conf")) {
+            permissionsFile = migrateLegacy(permissionsFile, ".conf", HoconConfigurationLoader.builder().setFile(permissionsFile).build(), "HOCON");
         } else {
-            permissionsFileLoader = HoconConfigurationLoader.builder().setFile(permissionsFile).build();
+            permissionsFileLoader = createLoader(permissionsFile);
         }
 
         try {
             permissionsConfig = permissionsFileLoader.load(ConfigurationOptions.defaults());//.setMapFactory(MapFactories.unordered()));
         } catch (IOException e) {
-            throw new PermissionsLoadingException("While loading permissions file from " + permissionsFile, e);
+            throw new PermissionsLoadingException(_("While loading permissions file from %s", permissionsFile), e);
         }
 
         final TransformAction movePrefixSuffixDefaultAction = new TransformAction() {
@@ -225,15 +256,16 @@ public class FileDataStore extends AbstractDataStore {
         versionUpdater.apply(permissionsConfig);
         int endVersion = permissionsConfig.getNode("schema-version").getInt();
         if (endVersion > startVersion) {
-            getManager().getLogger().info("{} schema version updated from {} to {}", permissionsFile, startVersion, endVersion);
+            getManager().getLogger().info(_("%s schema version updated from %s to %s", permissionsFile, startVersion, endVersion).translateFormatted(Locale.getDefault()));
             try {
                 save().get();
             } catch (InterruptedException | ExecutionException e) {
-                throw new PermissionsLoadingException("While performing version upgrade", e);
+                throw new PermissionsLoadingException(_("While performing version upgrade"), e);
             }
         }
     }
 
+    @Override
     public void close() {
 
     }
@@ -269,7 +301,7 @@ public class FileDataStore extends AbstractDataStore {
         try {
             return FileOptionSubjectData.fromNode(permissionsConfig.getNode(typeToSection(type), identifier));
         } catch (ObjectMappingException e) {
-            throw new PermissionsLoadingException("While deserializing subject data for " + type + ":" + identifier, e);
+            throw new PermissionsLoadingException(_("While deserializing subject data for %s:", identifier), e);
         }
     }
 
@@ -314,12 +346,31 @@ public class FileDataStore extends AbstractDataStore {
     }
 
     @Override
+    public Iterable<String> getRegisteredTypes() {
+        return Iterables.transform(Maps.filterValues(this.permissionsConfig.getChildrenMap(), new Predicate<ConfigurationNode>() {
+            @Override
+            public boolean apply(@Nullable ConfigurationNode input) {
+                return input != null && input.hasMapChildren();
+            }
+        }).keySet(), new Function<Object, String>() {
+            @Nullable
+            @Override
+            public String apply(@Nullable Object input) {
+                final String typeStr = input.toString();
+                return typeStr.substring(0, typeStr.length() - 1); // trim trailing s
+            }
+        });
+    }
+
+    @Override
     public Iterable<Map.Entry<Map.Entry<String, String>, ImmutableOptionSubjectData>> getAll() {
         return Iterables.concat(Iterables.transform(permissionsConfig.getChildrenMap().keySet(), new Function<Object, Iterable<Map.Entry<Map.Entry<String,String>,ImmutableOptionSubjectData>>>() {
             @Nullable
             @Override
             public Iterable<Map.Entry<Map.Entry<String, String>, ImmutableOptionSubjectData>> apply(@Nullable final Object type) {
-                return Iterables.transform(getAll(type.toString()), new Function<Map.Entry<String, ImmutableOptionSubjectData>, Map.Entry<Map.Entry<String, String>, ImmutableOptionSubjectData>>() {
+                final String typeStr = type.toString();
+
+                return Iterables.transform(getAll(typeStr.substring(0, typeStr.length() - 1)), new Function<Map.Entry<String, ImmutableOptionSubjectData>, Map.Entry<Map.Entry<String, String>, ImmutableOptionSubjectData>>() {
                     @Nullable
                     @Override
                     public Map.Entry<Map.Entry<String, String>, ImmutableOptionSubjectData> apply(Map.Entry<String, ImmutableOptionSubjectData> input2) {

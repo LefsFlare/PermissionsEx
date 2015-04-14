@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.backends.memory;
+package ninja.leaping.permissionsex.backend.memory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
@@ -45,7 +45,7 @@ public class MemoryOptionSubjectData implements ImmutableOptionSubjectData {
         try {
             MAPPER = ObjectMapper.forClass(DataEntry.class);
         } catch (ObjectMappingException e) {
-            throw new ExceptionInInitializerError(e); // This error indicates a programming issue
+            throw new ExceptionInInitializerError(e); // This debug indicates a programming issue
         }
     }
 
@@ -57,6 +57,7 @@ public class MemoryOptionSubjectData implements ImmutableOptionSubjectData {
         ret.put(newKey, newVal);
         return Collections.unmodifiableMap(ret);
     }
+
     @ConfigSerializable
     protected static class DataEntry {
         @Setting private Map<String, Integer> permissions;
@@ -190,13 +191,13 @@ public class MemoryOptionSubjectData implements ImmutableOptionSubjectData {
 
     @Override
     public Map<Set<Entry<String, String>>, Map<String, String>> getAllOptions() {
-        return Maps.transformValues(contexts, new Function<DataEntry, Map<String, String>>() {
+        return Maps.filterValues(Maps.transformValues(contexts, new Function<DataEntry, Map<String, String>>() {
             @Nullable
             @Override
             public Map<String, String> apply(@Nullable DataEntry dataEntry) {
                 return dataEntry.options;
             }
-        });
+        }), Predicates.notNull());
     }
 
     @Override
@@ -381,11 +382,13 @@ public class MemoryOptionSubjectData implements ImmutableOptionSubjectData {
         return newWithUpdated(contexts, getDataEntryOrNew(contexts).withoutParents());
     }
 
+    @Override
     public int getDefaultValue(Set<Entry<String, String>> contexts) {
         DataEntry ent = this.contexts.get(contexts);
         return ent == null ? 0 : ent.defaultValue;
     }
 
+    @Override
     public ImmutableOptionSubjectData setDefaultValue(Set<Entry<String, String>> contexts, int defaultValue) {
         return newWithUpdated(contexts, getDataEntryOrNew(contexts).withDefaultValue(defaultValue));
     }

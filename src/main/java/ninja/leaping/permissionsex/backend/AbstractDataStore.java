@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ninja.leaping.permissionsex.backends;
+package ninja.leaping.permissionsex.backend;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -36,6 +36,8 @@ import ninja.leaping.permissionsex.exception.PermissionsLoadingException;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.Callable;
+
+import static ninja.leaping.permissionsex.util.Translations._;
 
 /**
  * Base implementation of a data store that provides common points for other data stores to hook into.
@@ -147,7 +149,7 @@ public abstract class AbstractDataStore implements DataStore {
         try {
             ((ObjectMapper) factory.mapper).bind(this).serialize(node);
         } catch (ObjectMappingException e) {
-            throw new PermissionsLoadingException("Error while serializing backend " + node.getKey(), e);
+            throw new PermissionsLoadingException(_("Error while serializing backend %s", node.getKey()), e);
         }
         return factory.type;
     }
@@ -174,7 +176,7 @@ public abstract class AbstractDataStore implements DataStore {
             try {
                 return mapper.bindToNew().populate(config);
             } catch (ObjectMappingException e) {
-                throw new PermissionsLoadingException("Error while deserializing backend " + identifier, e);
+                throw new PermissionsLoadingException(_("Error while deserializing backend %s", identifier), e);
             }
         }
     }
